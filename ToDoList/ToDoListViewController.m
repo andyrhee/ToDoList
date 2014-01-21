@@ -88,9 +88,8 @@
     
     NSLog(@"item %@ at row %d", item, indexPath.row);
     
-    cell.todoItemTextField.text = item;
-
-    //objc_setAssociated
+    UITextField *tf = cell.todoItemTextField;
+    tf.text = item;
     
     return cell;
 }
@@ -119,8 +118,12 @@
     NSLog(@"todoList.count: %d", self.todoList.count);
 
     [self.tableView reloadData];
-
-    // set first respondent to text field in the selected cell
+    
+    // first responder
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    BOOL status = [cell becomeFirstResponder];
+    
+    NSLog(@"first responder status: %hhd", status);
 
     [self saveToDoList];
 
@@ -179,6 +182,11 @@
 // Override to support rearranging the table view.
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath
 {
+    NSString *tmpStr = self.todoList[toIndexPath.row];
+    self.todoList[toIndexPath.row] = self.todoList[fromIndexPath.row];
+    self.todoList[fromIndexPath.row] = tmpStr;
+    
+    [self saveToDoList];
 }
 
 /*
