@@ -167,9 +167,10 @@
         // Delete the row from the data source
         //[tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
         [self.todoList removeObjectAtIndex:indexPath.row];
-        [self saveToDoList];
         [tableView reloadData];
-    }   
+        [self saveToDoList];
+
+    }
     else if (editingStyle == UITableViewCellEditingStyleInsert) {
         // Create a new instance of the appropriate class, insert it into the array, and add a new row to the table view
 //        NSString *str = @"inserted string";
@@ -186,6 +187,7 @@
     self.todoList[toIndexPath.row] = self.todoList[fromIndexPath.row];
     self.todoList[fromIndexPath.row] = tmpStr;
     
+    [tableView reloadData];
     [self saveToDoList];
 }
 
