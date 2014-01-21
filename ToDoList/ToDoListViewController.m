@@ -16,7 +16,6 @@
 
 @property (nonatomic, strong) UIBarButtonItem *addButtonItem;
 
-@property (nonatomic, strong) UIBarButtonItem *doneButtonItem;
 - (IBAction)editEnd:(id)sender;
 - (void)saveToDoList;
 
