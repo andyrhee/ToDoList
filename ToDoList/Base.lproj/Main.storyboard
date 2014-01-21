@@ -37,6 +37,10 @@
                                 </connections>
                             </tableViewCell>
                         </prototypes>
+                        <connections>
+                            <outlet property="dataSource" destination="qgm-mu-2Er" id="8WD-ch-lyj"/>
+                            <outlet property="delegate" destination="qgm-mu-2Er" id="lgY-ia-9wN"/>
+                        </connections>
                     </tableView>
                     <navigationItem key="navigationItem" title="To Do List" id="6CH-9u-jBz"/>
                 </tableViewController>

@@ -120,7 +120,16 @@
     [self.tableView reloadData];
     
     // first responder
-    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    //UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    
+    NSIndexPath *path = [self.tableView indexPathForSelectedRow];
+    
+    NSLog(@"path: %@", path);
+    
+    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:path];
+    
+    NSLog(@"cell: %@", cell);
+    
     BOOL status = [cell becomeFirstResponder];
     
     NSLog(@"first responder status: %hhd", status);
@@ -167,7 +176,8 @@
         // Delete the row from the data source
         //[tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
         [self.todoList removeObjectAtIndex:indexPath.row];
-        [tableView reloadData];
+        //[tableView reloadData];
+        [tableView deleteRowsAtIndexPaths:@[indexPath] withRowAnimation:UITableViewRowAnimationFade];
         [self saveToDoList];
 
     }
@@ -183,11 +193,51 @@
 // Override to support rearranging the table view.
 - (void)tableView:(UITableView *)tableView moveRowAtIndexPath:(NSIndexPath *)fromIndexPath toIndexPath:(NSIndexPath *)toIndexPath
 {
-    NSString *tmpStr = self.todoList[toIndexPath.row];
-    self.todoList[toIndexPath.row] = self.todoList[fromIndexPath.row];
-    self.todoList[fromIndexPath.row] = tmpStr;
+    int from = fromIndexPath.row;
+    int to = toIndexPath.row;
+    NSString *t1, *t2;
+    
+    if (from > to) { // moving up
+        t1 = self.todoList[to];
+        self.todoList[to] = self.todoList[from];
+        self.todoList[from] = self.todoList[from - 1];
+        
+        for (int i = from-1; i > to + 1; i--) {
+            self.todoList[i] = self.todoList[i-1];
+        }
+        
+        self.todoList[to + 1] = t1;
+    }
+    else if (from < to) { // moving down
+        t1 = self.todoList[to];
+        self.todoList[to] = self.todoList[from];
+        self.todoList[from] = self.todoList[from + 1];
+        
+        for (int i = from+1; i < to - 1; i++) {
+            self.todoList[i] = self.todoList[i+1];
+        }
+        
+        self.todoList[to - 1] = t1;
+    }
+        
+        /*
+         a = [1, 2, 3, 4, 5]
+         from = 2, to = 4 expected a = [1, 2, 4, 5, 3]
+         t1 = a[4] => 5
+         a[4] = a[2] => [1, 2, 3, 4, 3]
+         a[2] = a[2+1] => [1, 2, 4, 4, 3]
+         
+         i = 3; i < 4-1 ? : false
+         
+         a[3] = 5 => [1, 2, 4, 5, 3]
+         
+         */
+        
+
+
     
     [tableView reloadData];
+    
     [self saveToDoList];
 }
 
