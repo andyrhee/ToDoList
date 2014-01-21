@@ -9,6 +9,7 @@
 #import "ToDoListViewController.h"
 #import "EditableCell.h"
 #import "Item.h"
+#import <objc/runtime.h>
 
 @interface ToDoListViewController ()
 
@@ -16,12 +17,16 @@
 
 @property (nonatomic, strong) UIBarButtonItem *addButtonItem;
 
+@property BOOL isNavBarEditing;
+
 - (IBAction)editEnd:(id)sender;
 - (void)saveToDoList;
 
 @end
 
 @implementation ToDoListViewController
+
+static char indexPathKey;
 
 - (id)initWithStyle:(UITableViewStyle)style
 {
@@ -51,7 +56,7 @@
     // Uncomment the following line to display an Edit button in the navigation bar for this view controller.
     self.navigationItem.leftBarButtonItem = self.editButtonItem;
     
-    self.addButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(add:)];
+    self.addButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd target:self action:@selector(addTodoItem:)];
     
     //self.doneButtonItem = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone target:self action:@selector(done:)];
     
@@ -91,6 +96,10 @@
     UITextField *tf = cell.todoItemTextField;
     tf.text = item;
     
+    cell.todoItemTextField.delegate = self;  // self is the ToDoListViewController
+    
+    objc_setAssociatedObject(cell.todoItemTextField, &indexPathKey, indexPath, OBJC_ASSOCIATION_RETAIN_NONATOMIC);
+    
     return cell;
 }
 
@@ -104,12 +113,15 @@
     EditableCell *cell = (EditableCell *)[tableView cellForRowAtIndexPath:indexPath];
     
     self.todoList[rowIndex] = cell.todoItemTextField.text;
+    
     [self.tableView reloadData];
+    
+    [self saveToDoList];
 
 }
 
 
-- (void)add:(id)sender
+- (void)addTodoItem:(id)sender
 {
     NSLog(@"Add: %@", sender);
     
@@ -120,17 +132,17 @@
     [self.tableView reloadData];
     
     // first responder
-    //UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
+    EditableCell *cell = (EditableCell *)[self.tableView cellForRowAtIndexPath:[NSIndexPath indexPathForRow:0 inSection:0]];
     
-    NSIndexPath *path = [self.tableView indexPathForSelectedRow];
+//    NSIndexPath *path = [self.tableView indexPathForSelectedRow];
+//    
+//    NSLog(@"path: %@", path);
+//    
+//    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:path];
+//    
+//    NSLog(@"cell: %@", cell);
     
-    NSLog(@"path: %@", path);
-    
-    UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:path];
-    
-    NSLog(@"cell: %@", cell);
-    
-    BOOL status = [cell becomeFirstResponder];
+    BOOL status = [cell.todoItemTextField becomeFirstResponder];
     
     NSLog(@"first responder status: %hhd", status);
 
@@ -146,24 +158,118 @@
 }
 
 - (IBAction)editEnd:(id)sender {
+    
     NSLog(@"editEnd");
+    
+//    NSArray *paths = [self.tableView indexPathsForVisibleRows];
+//    
+//    NSLog(@"path: %@", paths);
+//    
+//    for (int i = 0; i < paths.count; i++) {
+//        NSIndexPath *path = paths[i];
+//        
+//        UITableViewCell *cell = [self.tableView cellForRowAtIndexPath:path];
+//        
+//        NSLog(@"cell: %@", cell);
+//        
+//        if (cell.textLabel.text == nil) {
+//            self.todoList[path.row] = @"";
+//        }
+//        else {
+//            self.todoList[path.row] = cell.textLabel.text;
+//        }
+//    }
+    
+    [self saveToDoList];
+}
+
+//- (BOOL)textFieldShouldReturn:(UITextField *)textField {
+//    
+//    //NSLog(@"textField: %@", textField);
+//    
+//    [textField resignFirstResponder];
+//    
+//    //NSLog(@"self.tableView: %@", self.tableView);
+//    
+//    return NO;
+//}
+
+- (BOOL)textFieldShouldBeginEditing:(UITextField *)textField {
+    // About to edit some field.  Make sure there is a done button instead of an add button
+    if (!self.isNavBarEditing) {
+        [self toggleRightNavButton];
+    }
+    return YES;
+}
+
+- (BOOL)textFieldShouldEndEditing:(UITextField *)textField {
+    [self updateToDoItem:textField];
+    return YES;
 }
 
 - (BOOL)textFieldShouldReturn:(UITextField *)textField {
+    [self updateToDoItem:textField];
+    return YES;
+}
+
+// Update the data model after an edit has taken place
+- (void)updateToDoItem:(UITextField *)textField {
+    NSIndexPath *indexPath = objc_getAssociatedObject(textField, &indexPathKey);
     
-    NSLog(@"textField: %@", textField);
+    [self.todoList replaceObjectAtIndex:indexPath.row withObject:textField.text];
     
-    [textField resignFirstResponder];
+    [self saveToDoList];
     
-    NSLog(@"self.tableView: %@", self.tableView);
+    // update the table view
+    [self.tableView reloadData];
+}
+
+- (void)toggleRightNavButton {
+    UIBarButtonItem *theButton;
+    self.isNavBarEditing = !(self.isNavBarEditing);
+    if (self.isNavBarEditing) {
+        theButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemDone
+                                                                  target:self
+                                                                  action:@selector(doneEditing:)];
+        // Dont allow the user to delete or reorder rows while editing
+        self.navigationItem.leftBarButtonItem.enabled = NO;
+        
+    } else {
+        theButton = [[UIBarButtonItem alloc] initWithBarButtonSystemItem:UIBarButtonSystemItemAdd
+                                                                  target:self
+                                                                  action:@selector(addTodoItem:)];
+        // Allow the user to delete or reorder rows while not editing
+        self.navigationItem.leftBarButtonItem.enabled = YES;
+        
+    }
+    self.navigationItem.rightBarButtonItem = theButton;
+}
+
+- (void)doneEditing:(id)sender {
+    [self toggleRightNavButton];
     
-    return NO;
+    // fire a should end editing call
+    [self.tableView endEditing:YES];
+}
+
+// When the user enters Edit mode (to delete or reoder the list) then disable the add button
+// and vice verse if they exit Edit mode
+- (void)setEditing:(BOOL)editing animated:(BOOL)animated {
+    [super setEditing:editing animated:animated];
+    [self.tableView setEditing:editing animated:YES];
+    if (editing) {
+        self.navigationItem.rightBarButtonItem.enabled = NO;
+    } else {
+        self.navigationItem.rightBarButtonItem.enabled = YES;
+    }
 }
 
 // Override to support conditional editing of the table view.
 - (BOOL)tableView:(UITableView *)tableView canEditRowAtIndexPath:(NSIndexPath *)indexPath
 {
     // Return NO if you do not want the specified item to be editable.
+    //NSLog(@"indexPath in canEditRowAtIndexPath: %@", indexPath);
+    
     return YES;
 }
 
@@ -195,7 +301,7 @@
 {
     int from = fromIndexPath.row;
     int to = toIndexPath.row;
-    NSString *t1, *t2;
+    NSString *t1;
     
     if (from > to) { // moving up
         t1 = self.todoList[to];
@@ -219,22 +325,6 @@
         
         self.todoList[to - 1] = t1;
     }
-        
-        /*
-         a = [1, 2, 3, 4, 5]
-         from = 2, to = 4 expected a = [1, 2, 4, 5, 3]
-         t1 = a[4] => 5
-         a[4] = a[2] => [1, 2, 3, 4, 3]
-         a[2] = a[2+1] => [1, 2, 4, 4, 3]
-         
-         i = 3; i < 4-1 ? : false
-         
-         a[3] = 5 => [1, 2, 4, 5, 3]
-         
-         */
-        
-
-
     
     [tableView reloadData];
     
