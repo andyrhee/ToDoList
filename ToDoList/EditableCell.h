@@ -1,5 +1,5 @@
 //
-//  ViewController.h
+//  EditableCell.h
 //  ToDoList
 //
 //  Created by Andy Rhee on 1/18/14.
@@ -8,6 +8,7 @@
 
 #import <UIKit/UIKit.h>
 
-@interface ViewController : UIViewController
+@interface EditableCell : UITableViewCell
+@property (weak, nonatomic) IBOutlet UITextField *todoItemTextField;
 
 @end
